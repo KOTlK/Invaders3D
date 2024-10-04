@@ -273,7 +273,6 @@ GameObject:
   - component: {fileID: 983788343}
   - component: {fileID: 983788346}
   - component: {fileID: 983788347}
-  - component: {fileID: 983788348}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -829,6 +828,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   VarsAsset: {fileID: 4900000, guid: 8696a122250b61547a2380d24d00cbc4, type: 3}
   EntityManager: {fileID: 983788343}
+  PlayerPrefab:
+    Path: Player
+    Reference: {fileID: 8959681098904851582, guid: fcef73d57aec73745bfe82df4b6a830f,
+      type: 3}
 --- !u!4 &983788345
 Transform:
   m_ObjectHideFlags: 0
@@ -1058,18 +1061,6 @@ MonoBehaviour:
     y: 0
     width: 0
     height: 0
---- !u!114 &983788348
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 983788341}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e944c4904ae09a644b370f6b8d1a89ca, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1147746306
 GameObject:
   m_ObjectHideFlags: 0

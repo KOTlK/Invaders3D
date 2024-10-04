@@ -10,6 +10,8 @@ public class Main : MonoBehaviour {
     public Events         Events;
     public ResourceSystem ResourceSystem;
     public SaveSystem     SaveSystem;
+    public PlayerInput    Input;
+    public ResourceLink   PlayerPrefab;
     
     private void Awake() {
         Vars.ParseVars(VarsAsset);
@@ -17,12 +19,20 @@ public class Main : MonoBehaviour {
         Events         = new Events();
         ResourceSystem = new ResourceSystem();
         SaveSystem     = new SaveSystem();
+        Input          = new PlayerInput();
+
+        Input.Initialize(EntityManager);
 
         Singleton<SaveSystem>.Create(SaveSystem);
         Singleton<ResourceSystem>.Create(ResourceSystem);
         Singleton<EntityManager>.Create(EntityManager);
         Singleton<TaskRunner>.Create(TaskRunner);
         Singleton<Events>.Create(Events);
+        Singleton<PlayerInput>.Create(Input);
+
+        EntityManager.BakeEntities();
+        var player = EntityManager.CreateEntity(PlayerPrefab, Vector3.zero, Quaternion.identity);
+        Input.Gameplay.Initialize(player);
     }
 
     private void OnDestroy() {
@@ -35,9 +45,12 @@ public class Main : MonoBehaviour {
     
     private void Update() {
         Clock.Update();
+        Input.UpdateInput();
+        EntityManager.Execute();
         TaskRunner.RunTaskGroup(TaskGroupType.ExecuteAlways);
     }
-    [ConsoleCommand("quit")]
+
+    [ConsoleCommand("quit", "exit")]
     public static void Quit() {
 #if UNITY_EDITOR
         EditorApplication.ExitPlaymode();

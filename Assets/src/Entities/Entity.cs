@@ -13,6 +13,8 @@ public enum EntityFlags
 
 public enum EntityType
 {
+    Player,
+    Ship
     // types goes here
 }
 

@@ -1,24 +1,24 @@
 using UnityEngine;
 
 public abstract class Ship : Entity {
-    public float   MaxSpeed = 10f;
-    public float   MaxAcceleration = 12f;
-    public float   MaxAngularRotation = 180f;
-    public float   RotationSlowRadius = 30f;
-    public float   Drag = 20f;
-    public float   DragSlowRadius = 2f;
+    public float            MaxSpeed                    = 10f;
+    public float            MaxAcceleration             = 12f;
+    public float            MaxAngularRotation          = 180f;
+    public float            RotationSlowRadius          = 30f;
+    public float            Drag                        = 20f;
+    public float            DragSlowRadius              = 2f;
 
-    public float   Bps;
-    public float   MaxDeviation;
-    public bool    WasShootingPreviousFrame;
+    public float            Bps;
+    public float            MaxDeviation;
+    public bool             WasShootingPreviousFrame;
 
-    public Vector3 Velocity;
-    public float   Orientation;
+    public Vector3          Velocity;
+    public float            Orientation;
 
-    public Transform    Muzzle;
-    public Bullet       Bullet;
-    public ResourceLink BulletPrefab;
-    public Bullets      Bullets;
+    public Transform        Muzzle;
+    public BulletConfig     Bullet;
+    public ResourceLink     BulletPrefab;
+    public Bullets          Bullets;
 
     private float _lastTimeShot;
 
@@ -47,10 +47,7 @@ public abstract class Ship : Entity {
                 var cos = Mathf.Cos((Orientation + deviation) * Mathf.Deg2Rad);
                 var sin = Mathf.Sin((Orientation + deviation) * Mathf.Deg2Rad);
                 var dir = new Vector3(cos, 0, -sin);
-                var bullet = Bullet;
-                bullet.Position = Muzzle.position;
-                bullet.Direction = dir;
-                Bullets.Create(bullet, BulletPrefab);
+                Bullets.Create(Muzzle.position, dir, Orientation + deviation, Bullet, BulletPrefab);
             }
 
             _lastTimeShot = time;

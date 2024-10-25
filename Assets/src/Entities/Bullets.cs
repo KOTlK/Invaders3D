@@ -9,17 +9,22 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Jobs;
+using static Assertions;
+
+[System.Serializable]
+public struct BulletConfig {
+    public LayerMask LayerMask;
+    public float     Speed;
+    public float     Radius;
+    public float     TimeToLive;
+}
 
 [System.Serializable]
 public struct Bullet {
-    public float3 Position;
-    public float3 Direction;
-    public LayerMask LayerMask;
-    public float  Speed;
-    public float  Radius;
-    public float  TimeToLive;
-    public float  LiveTime;
-    public float  Orientation;
+    public float3   Position;
+    public float3   Direction;
+    public float    SpawnTime;
+    public float    Orientation;
 }
 
 [NativeContainerSupportsMinMaxWriteRestriction]
@@ -61,8 +66,8 @@ public unsafe struct BulletsCollisions : IDisposable {
     public NativeArray<SpherecastCommand> Casts;
     public NativeArray<int>               Entities;
 
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
     internal int                          m_Length;
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
     internal int                          m_MinIndex;
     internal int                          m_MaxIndex;
     internal AtomicSafetyHandle           m_Safety;
@@ -115,7 +120,7 @@ public unsafe struct BulletsCollisions : IDisposable {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             return new ParallelWriter(origin, ref m_Safety);
 #else
-            return new ParallelWriter(this);
+            return new ParallelWriter(origin);
 #endif                    
     }
 }
@@ -123,32 +128,30 @@ public unsafe struct BulletsCollisions : IDisposable {
 [BurstCompile]
 public struct BulletsMovementJob : IJobParallelFor {
                 public NativeArray<Bullet>                          Bullets;
+    [ReadOnly]  public NativeArray<BulletConfig>                    Configs;
     [WriteOnly] public NativeList<int>.ParallelWriter               RemoveQueue; 
     [WriteOnly] public BulletsCollisions.ParallelWriter             Collisions;
                 public float                                        Dt;
+                public float                                        Time;
 
     public void Execute(int i) {
-        var liveTime = Bullets[i].LiveTime + Dt;
-
-        if(liveTime > Bullets[i].TimeToLive) {
+        if(Bullets[i].SpawnTime + Configs[i].TimeToLive <= Time) {
             RemoveQueue.AddNoResize(i);
         } else {
-            var distance = Bullets[i].Speed * Dt;
+            var distance = Configs[i].Speed * Dt;
             Collisions.Add(new SpherecastCommand(Bullets[i].Position, 
-                                                 Bullets[i].Radius,
+                                                 Configs[i].Radius,
                                                  Bullets[i].Direction,
-                                                 new QueryParameters(~Bullets[i].LayerMask,
+                                                 new QueryParameters(Configs[i].LayerMask,
                                                                      true,
                                                                      QueryTriggerInteraction.Ignore,
                                                                      true),
                                                  distance), i);
             Bullets[i] = new Bullet {
-                Radius     = Bullets[i].Radius,
-                Speed      = Bullets[i].Speed,
-                Direction  = Bullets[i].Direction,
-                TimeToLive = Bullets[i].TimeToLive,
-                LiveTime   = liveTime,
-                Position   = Bullets[i].Position + Bullets[i].Direction * distance
+                Direction   = Bullets[i].Direction,
+                Position    = Bullets[i].Position + Bullets[i].Direction * distance,
+                SpawnTime   = Bullets[i].SpawnTime,
+                Orientation = Bullets[i].Orientation
             };
         }
     }
@@ -167,63 +170,89 @@ public struct BulletsCollisionResponseJob : IJobParallelFor {
     }
 }
 
-public class Bullets : MonoBehaviour {
-    public NativeList<Bullet>   Entities;
-    public Transform[]          Transforms = new Transform[128];
-    public TransformAccessArray TransformAccess;
-    public NativeList<int>      RemoveQueue;
+public struct SyncBulletsJob : IJobParallelForTransform
+{
+    [ReadOnly] public NativeList<Bullet> Bullets;
 
-    private static Dictionary<ResourceLink, Stack<Transform>> _pools;
-    private static ResourceLink[]                             _prefabs;
-    private static ResourceSystem _resources;
+    public void Execute(int index, TransformAccess transform) {
+        transform.SetPositionAndRotation(Bullets[index].Position, 
+                                         Quaternion.AngleAxis(Bullets[index].Orientation, Vector3.up));
+    }
+}
+
+public class Bullets : MonoBehaviour {
+    public NativeList<Bullet>           Entities;
+    public NativeList<BulletConfig>     Configs;
+    public Transform[]                  Transforms = new Transform[128];
+    public TransformAccessArray         TransformAccess;
+    public NativeList<int>              RemoveQueue;
+
+    private static Dictionary<ResourceLink, Stack<Transform>>   _pools;
+    private static ResourceLink[]                               _prefabs;
+    private static ResourceSystem                               _resources;
 
     public void Init() {
-        Entities = new NativeList<Bullet>(4096, Allocator.Persistent);
-        RemoveQueue = new NativeList<int>(2048, Allocator.Persistent);
-        TransformAccess = new TransformAccessArray(128);
-        _resources = Singleton<ResourceSystem>.Instance;
-        _pools = new();
-        _prefabs = new ResourceLink[128];
+        Entities            = new NativeList<Bullet>(4096, Allocator.Persistent);
+        Configs             = new NativeList<BulletConfig>(4096, Allocator.Persistent);
+        RemoveQueue         = new NativeList<int>(2048, Allocator.Persistent);
+        TransformAccess     = new TransformAccessArray(128);
+        _resources          = Singleton<ResourceSystem>.Instance;
+        _pools              = new();
+        _prefabs            = new ResourceLink[128];
     }
 
     private void OnDestroy() {
         Entities.Dispose();
+        Configs.Dispose();
         TransformAccess.Dispose();
         RemoveQueue.Dispose();
     }
 
-    public void Create(Bullet config, ResourceLink prefab) {
+    public void Create(Vector3 position, 
+                       Vector3 direction, 
+                       float orientation, 
+                       BulletConfig config, 
+                       ResourceLink prefab) {
+        Assert(Entities.Length == Configs.Length);
         var index = Entities.Length;
-        Entities.Add(config);
+        Entities.Add(new Bullet {
+            Position    = position,
+            Direction   = direction,
+            SpawnTime   = Clock.Time,
+            Orientation = orientation
+        });
+        Configs.Add(config);
 
         if(Entities.Length >= Transforms.Length) {
             Array.Resize(ref Transforms, Entities.Length << 1);
             Array.Resize(ref _prefabs, Entities.Length << 1);
         }
 
-        Transforms[index] = Get(prefab);
-        _prefabs[index] = prefab;
+        Transforms[index]   = Get(prefab);
+        _prefabs[index]     = prefab;
         TransformAccess.Add(Transforms[index]);
     }
     
     public unsafe void UpdateBehavior() {
-        var dt = Clock.Delta;
-        var physics = new BulletsCollisions(Entities.Length, Allocator.TempJob);
-        var physicsPtr = &physics;
-        var bulletsJob = new BulletsMovementJob {
-            Bullets        = Entities.AsArray(),
-            RemoveQueue    = RemoveQueue.AsParallelWriter(),
-            Collisions     = physics.AsParallelWriter(physicsPtr),
-            Dt             = dt
+        var dt          = Clock.Delta;
+        var time        = Clock.Time;
+        var physics     = new BulletsCollisions(Entities.Length, Allocator.TempJob);
+        var physicsPtr  = &physics;
+        var bulletsJob  = new BulletsMovementJob {
+            Bullets         = Entities.AsArray(),
+            Configs         = Configs.AsArray(),
+            RemoveQueue     = RemoveQueue.AsParallelWriter(),
+            Collisions      = physics.AsParallelWriter(physicsPtr),
+            Dt              = dt,
+            Time            = time
         };
 
         var bulletsHandle = bulletsJob.Schedule(Entities.Length, 32);
 
         bulletsHandle.Complete();
 
-        var physicsResults = new NativeArray<RaycastHit>(Entities.Length, Allocator.TempJob);
-
-        var physicsHandle = SpherecastCommand.ScheduleBatch(physics.Casts, physicsResults, 1, 1);
+        var physicsResults  = new NativeArray<RaycastHit>(Entities.Length, Allocator.TempJob);
+        var physicsHandle   = SpherecastCommand.ScheduleBatch(physics.Casts, physicsResults, 1, 1);
 
         physicsHandle.Complete();
 
@@ -259,30 +288,20 @@ public class Bullets : MonoBehaviour {
 
         handle.Complete();
 
-
-
-        // physicsCommands.Dispose();
-        // castedEntities.Dispose();
         physics.Dispose();
-        // UnsafeUtility.Free(physicsPtr, Allocator.TempJob);
         physicsResults.Dispose();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void KillImmediate(int i) {
         Entities.RemoveAtSwapBack(RemoveQueue[i]);
+        Configs.RemoveAtSwapBack(RemoveQueue[i]);
         Release(Transforms[RemoveQueue[i]], RemoveQueue[i]);
         Transforms[RemoveQueue[i]] = Transforms[Entities.Length];
         Transforms[Entities.Length] = null;
         TransformAccess.RemoveAtSwapBack(RemoveQueue[i]);    
     }
 
-    private struct DescendingComparer : IComparer<int> {
-        public int Compare(int x, int y) {
-            var a = y - x;
-            return a == 0 ? 0 : a / math.abs(a);
-        }
-    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Transform Get(ResourceLink prefab) {
@@ -306,14 +325,11 @@ public class Bullets : MonoBehaviour {
         
         t.gameObject.SetActive(false);
     }
-}
-
-public struct SyncBulletsJob : IJobParallelForTransform
-{
-    [ReadOnly] public NativeList<Bullet> Bullets;
-
-    public void Execute(int index, TransformAccess transform) {
-        transform.SetPositionAndRotation(Bullets[index].Position, 
-                                         Quaternion.AngleAxis(Bullets[index].Orientation, Vector3.up));
+    
+    private struct DescendingComparer : IComparer<int> {
+        public int Compare(int x, int y) {
+            var a = y - x;
+            return a == 0 ? 0 : a / math.abs(a);
+        }
     }
 }

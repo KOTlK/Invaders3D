@@ -309,22 +309,12 @@ MonoBehaviour:
   Orientation: 0
   Muzzle: {fileID: 1995066385955457009}
   Bullet:
-    Position:
-      x: 0
-      y: 0
-      z: 0
-    Direction:
-      x: 0
-      y: 0
-      z: 0
     LayerMask:
       serializedVersion: 2
       m_Bits: 65
     Speed: 10
     Radius: 0.3
     TimeToLive: 5
-    LiveTime: 0
-    Orientation: 90
   BulletPrefab:
     Path: Bullet
     Reference: {fileID: 5486382924267833883, guid: b4aca1dfdcfe6bb4ab68d3ffbfed65c0,

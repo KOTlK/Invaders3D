@@ -35,6 +35,14 @@ public class Entity : MonoBehaviour, ISave  {
             }
         }
     }
+
+    public virtual void RegisterInstanceId(EntityManager em) {
+        em.EntityByInstanceId.Add(gameObject.GetInstanceID(), Handle);
+    }
+
+    public virtual void UnRegisterInstanceId(EntityManager em) {
+        em.EntityByInstanceId.Remove(gameObject.GetInstanceID());
+    }
     
     public virtual void OnBaking(){ }
     public virtual void OnCreate(){ }

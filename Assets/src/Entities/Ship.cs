@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public abstract class Ship : Entity {
+public abstract class Ship : Entity, IDamageable {
     public float            MaxSpeed                    = 10f;
     public float            MaxAcceleration             = 12f;
     public float            MaxAngularRotation          = 180f;
@@ -16,18 +16,33 @@ public abstract class Ship : Entity {
     public float            Orientation;
 
     public Transform        Muzzle;
+    public Collider         Collider;
     public BulletConfig     Bullet;
     public ResourceLink     BulletPrefab;
     public Bullets          Bullets;
 
     private float _lastTimeShot;
 
+    public bool Alive => Health > 0;
+
+    [field: SerializeField] public int Health       { get; private set; }
+    [field: SerializeField] public int MaxHealth    { get; private set; }
+
     public override void OnCreate() {
-        Bullets = Singleton<Bullets>.Instance;
+        Bullets         = Singleton<Bullets>.Instance;
+        Bullet.OwnerUid = Collider.GetInstanceID();
+        Bullet.Owner    = Handle;
+        Health          = MaxHealth;
     }
 
-    public override void Destroy() {
-        base.Destroy();
+    public override void RegisterInstanceId(EntityManager em) {
+        em.EntityByInstanceId.Add(Collider.GetInstanceID(), Handle);
+        base.RegisterInstanceId(em);
+    }
+
+    public override void UnRegisterInstanceId(EntityManager em) {
+        em.EntityByInstanceId.Remove(Collider.GetInstanceID());
+        base.UnRegisterInstanceId(em);
     }
 
     public void Shoot() {
@@ -52,5 +67,16 @@ public abstract class Ship : Entity {
 
             _lastTimeShot = time;
         }
+    }
+
+    public void ApplyDamage(float amount) {
+        Health = Mathf.Clamp(Health - Mathf.CeilToInt(amount), 0, MaxHealth);
+        if(Health <= 0) {
+            Destroy();
+        }
+    }
+
+    public void Heal(float amount) {
+        Health = Mathf.Clamp(Health + Mathf.CeilToInt(amount), 0, MaxHealth);
     }
 }

@@ -13,10 +13,13 @@ using static Assertions;
 
 [System.Serializable]
 public struct BulletConfig {
-    public LayerMask LayerMask;
-    public float     Speed;
-    public float     Radius;
-    public float     TimeToLive;
+    public Damage       Damage;
+    public EntityHandle Owner;
+    public LayerMask    LayerMask;
+    public int          OwnerUid; //Unity id, not Entity Id
+    public float        Speed;
+    public float        Radius;
+    public float        TimeToLive;
 }
 
 [System.Serializable]
@@ -159,12 +162,18 @@ public struct BulletsMovementJob : IJobParallelFor {
 
 [BurstCompile]
 public struct BulletsCollisionResponseJob : IJobParallelFor {
-    [ReadOnly]  public NativeArray<RaycastHit>        Hits;
-    [ReadOnly]  public NativeArray<int>               CastEntities;
-    [WriteOnly] public NativeList<int>.ParallelWriter RemoveQueue;
+    [ReadOnly]  public NativeArray<RaycastHit>              Hits;
+    [ReadOnly]  public NativeArray<int>                     CastEntities;
+    [ReadOnly]  public NativeArray<BulletConfig>            Configs;
+    [WriteOnly] public NativeList<int>.ParallelWriter       RemoveQueue;
+    [WriteOnly] public NativeList<Damage>.ParallelWriter    DamageList;
 
     public void Execute(int i) {
-        if(Hits[i].colliderInstanceID != 0) {
+        if(Hits[i].colliderInstanceID != 0 && 
+           Hits[i].colliderInstanceID != Configs[CastEntities[i]].OwnerUid) {
+            var damage = Configs[CastEntities[i]].Damage;
+            damage.ReceiverUid = Hits[i].colliderInstanceID;
+            DamageList.AddNoResize(damage);
             RemoveQueue.AddNoResize(CastEntities[i]);
         }
     }
@@ -181,6 +190,7 @@ public struct SyncBulletsJob : IJobParallelForTransform
 }
 
 public class Bullets : MonoBehaviour {
+    public EntityManager                EntityManager;
     public NativeList<Bullet>           Entities;
     public NativeList<BulletConfig>     Configs;
     public Transform[]                  Transforms = new Transform[128];
@@ -191,7 +201,8 @@ public class Bullets : MonoBehaviour {
     private static ResourceLink[]                               _prefabs;
     private static ResourceSystem                               _resources;
 
-    public void Init() {
+    public void Init(EntityManager em) {
+        EntityManager       = em;
         Entities            = new NativeList<Bullet>(4096, Allocator.Persistent);
         Configs             = new NativeList<BulletConfig>(4096, Allocator.Persistent);
         RemoveQueue         = new NativeList<int>(2048, Allocator.Persistent);
@@ -256,15 +267,29 @@ public class Bullets : MonoBehaviour {
 
         physicsHandle.Complete();
 
+        var damageList = new NativeList<Damage>(physics.Count, Allocator.TempJob);
+
         var physicsResponseJob = new BulletsCollisionResponseJob {
             Hits         = physicsResults,
             CastEntities = physics.Entities,
-            RemoveQueue  = RemoveQueue.AsParallelWriter()
+            Configs      = Configs.AsArray(),
+            RemoveQueue  = RemoveQueue.AsParallelWriter(),
+            DamageList   = damageList.AsParallelWriter()
         };
 
         var responseHandle = physicsResponseJob.Schedule(physics.Count, 32);
 
         responseHandle.Complete();
+
+        foreach(var damage in damageList) {
+            if(EntityManager.EntityByInstanceId.ContainsKey(damage.ReceiverUid)) {
+                if(EntityManager.GetEntity(EntityManager.EntityByInstanceId[damage.ReceiverUid], out var entity)) {
+                    if(entity is IDamageable damageable) {
+                        damageable.ApplyDamage(damage.Amount);
+                    }
+                }
+            }
+        }
 
         if(RemoveQueue.Length > 0) {
             RemoveQueue.Sort(new DescendingComparer());
@@ -290,6 +315,7 @@ public class Bullets : MonoBehaviour {
 
         physics.Dispose();
         physicsResults.Dispose();
+        damageList.Dispose();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

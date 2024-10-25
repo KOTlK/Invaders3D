@@ -32,7 +32,7 @@ public class Main : MonoBehaviour {
         Singleton<Events>.Create(Events);
         Singleton<PlayerInput>.Create(Input);
         Singleton<Bullets>.Create(Bullets);
-        Bullets.Init();
+        Bullets.Init(EntityManager);
 
         EntityManager.BakeEntities();
         var player = EntityManager.CreateEntity(PlayerPrefab, new Vector3(0, PlanesHeight, 0), Quaternion.identity);

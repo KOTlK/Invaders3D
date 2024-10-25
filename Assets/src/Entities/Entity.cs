@@ -14,7 +14,8 @@ public enum EntityFlags
 public enum EntityType
 {
     Player,
-    Ship
+    Ship,
+    Weapon
     // types goes here
 }
 

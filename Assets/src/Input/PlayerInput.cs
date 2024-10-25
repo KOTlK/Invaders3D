@@ -1,11 +1,12 @@
 using UnityEngine;
 
 public class KeyBinds {
-    //Gameplay
+    //Gameplay Keyboard
     public KeyCode MoveForward = KeyCode.W;
-    public KeyCode MoveBack = KeyCode.S;
-    public KeyCode MoveRight = KeyCode.D;
-    public KeyCode MoveLeft = KeyCode.A;
+    public KeyCode MoveBack    = KeyCode.S;
+    public KeyCode MoveRight   = KeyCode.D;
+    public KeyCode MoveLeft    = KeyCode.A;
+    public KeyCode Shoot       = KeyCode.Mouse0;
 }
 
 public enum Keymaps {
@@ -29,6 +30,7 @@ public class GameplayKeymap : Keymap {
     public EntityHandle Player;
     public Vector3 MovementDirection;
     public float   LookRotation;
+    public bool    Shooting;
 
     public void Initialize(EntityHandle player) {
         Player = player;
@@ -55,7 +57,7 @@ public class GameplayKeymap : Keymap {
             r -= 1f;
         }
 
-        MovementDirection = new Vector3(r, f).normalized;
+        MovementDirection = new Vector3(r, 0, f).normalized;
 
         if(EntityManager.GetEntity<Player>(Player, out var player)) {
             var p      = Camera.main.WorldToScreenPoint(player.transform.position);
@@ -63,15 +65,18 @@ public class GameplayKeymap : Keymap {
             var x      = target.x - p.x;
             var y      = target.y - p.y;
 
-            LookRotation = Mathf.Atan2(-x, y) * Mathf.Rad2Deg;
+            LookRotation = Mathf.Atan2(-y, x) * Mathf.Rad2Deg;
         } else {
             LookRotation =  0f;
         }
+
+        Shooting = Input.GetKey(Binds.Shoot);
     }
 
     public override void Reset() {
         MovementDirection = Vector3.zero;
         LookRotation = 0f;
+        Shooting = false;
     }
 }
 

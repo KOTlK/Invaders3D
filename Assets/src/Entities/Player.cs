@@ -8,6 +8,7 @@ public class Player : Ship {
     }
 
     public override void OnCreate() {
+        base.OnCreate();
         Input = Singleton<PlayerInput>.Instance;
     }
 
@@ -16,15 +17,27 @@ public class Player : Ship {
         var moveDir  = Input.Gameplay.MovementDirection;
         var targetAngle = Input.Gameplay.LookRotation;
 
-        Vector3 vel;
+        var vel = moveDir * MaxSpeed;
+
+        Vector3 targetVelocity;
 
         if(moveDir.sqrMagnitude < 0.01f) {
-            vel = moveDir * Drag;
-        } else {
-            vel = moveDir * MaxSpeed;
-        }
+            targetVelocity = Vector3.zero - Velocity;
+            var len = targetVelocity.magnitude;
 
-        var targetVelocity = vel - Velocity; 
+            if(len < DragSlowRadius) {
+                targetVelocity = targetVelocity.normalized * (Drag * len / DragSlowRadius);
+            } else if (len < Drag) {
+                targetVelocity = targetVelocity.normalized * Drag;
+            }
+
+        } else {
+            targetVelocity = vel - Velocity;
+
+            if(targetVelocity.magnitude > MaxAcceleration) {
+                targetVelocity = targetVelocity.normalized * MaxAcceleration;
+            }
+        }
 
         var targetRotation = Mathf.DeltaAngle(Orientation, targetAngle);
         var size = Mathf.Abs(targetRotation);
@@ -37,15 +50,22 @@ public class Player : Ship {
 
         p += Velocity * Clock.Delta;
 
-        MoveEntity(p, Quaternion.AngleAxis(Orientation, Vector3.forward));
+        MoveEntity(p, Quaternion.AngleAxis(Orientation, Vector3.up));
 
         Velocity += targetVelocity * Clock.Delta;
         Orientation += targetRotation * Clock.Delta;
 
-        if(Orientation > 360f) {
+        if(Orientation > 180f) {
             Orientation -= 360f;
-        } else if(Orientation < -360f) {
+        } else if(Orientation < -180f) {
             Orientation += 360f;
+        }
+
+        if(Input.Gameplay.Shooting) {
+            Shoot();
+            WasShootingPreviousFrame = true;
+        } else {
+            WasShootingPreviousFrame = false;
         }
     }
 }

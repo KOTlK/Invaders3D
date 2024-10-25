@@ -321,13 +321,15 @@ public class EntityManager : MonoBehaviour, ISave {
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void DestroyEntity(uint id) {
+    public void DestroyEntity(EntityHandle handle) {
         if(EntitiesToRemoveCount == RemoveQueue.Length) {
             Resize(ref RemoveQueue, EntitiesToRemoveCount << 1);
         }
-        
-        Entities[id].Alive = false;
-        RemoveQueue[EntitiesToRemoveCount++] = id;
+
+        if(IsValid(handle)) {
+            Entities[handle.Id].Alive = false;
+            RemoveQueue[EntitiesToRemoveCount++] = handle.Id;
+        }
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

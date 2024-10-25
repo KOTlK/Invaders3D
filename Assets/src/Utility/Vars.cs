@@ -1,4 +1,3 @@
-using System.IO;
 using UnityEngine;
 using System;
 using System.Reflection;
@@ -21,7 +20,7 @@ public static class Vars{
 }
 */
 
-public static class Vars{
+public static class Vars {
     
     public static void ParseVars(TextAsset asset){
         var text               = asset.text;

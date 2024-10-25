@@ -28,7 +28,7 @@ Transform:
   m_GameObject: {fileID: 6546842196680631708}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1.63, z: 1}
+  m_LocalScale: {x: 1.63, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8857108044373913585}
@@ -133,10 +133,11 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7602865107566868348}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.536, z: 0}
-  m_LocalScale: {x: 0.19, y: 0.52, z: 0.19}
+  m_LocalPosition: {x: 0.673, y: 0.071, z: 0}
+  m_LocalScale: {x: 1, y: 0.2, z: 0.2}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1995066385955457009}
   m_Father: {fileID: 1288695642788685107}
   m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -211,6 +212,37 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &7987923913218107655
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1995066385955457009}
+  m_Layer: 0
+  m_Name: Muzzle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1995066385955457009
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7987923913218107655}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.524, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8857108044373913585}
+  m_RootOrder: -1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8959681098904851582
 GameObject:
   m_ObjectHideFlags: 0
@@ -242,7 +274,7 @@ Transform:
   m_Children:
   - {fileID: 1288695642788685107}
   m_Father: {fileID: 0}
-  m_RootOrder: 6
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7620120501429234049
 MonoBehaviour:
@@ -268,6 +300,33 @@ MonoBehaviour:
   MaxAcceleration: 12
   MaxAngularRotation: 180
   RotationSlowRadius: 25
-  Drag: 20
+  Drag: 12
+  DragSlowRadius: 2
+  Bps: 300
+  MaxDeviation: 15
+  WasShootingPreviousFrame: 0
   Velocity: {x: 0, y: 0, z: 0}
   Orientation: 0
+  Muzzle: {fileID: 1995066385955457009}
+  Bullet:
+    Position:
+      x: 0
+      y: 0
+      z: 0
+    Direction:
+      x: 0
+      y: 0
+      z: 0
+    LayerMask:
+      serializedVersion: 2
+      m_Bits: 65
+    Speed: 10
+    Radius: 0.3
+    TimeToLive: 5
+    LiveTime: 0
+    Orientation: 90
+  BulletPrefab:
+    Path: Bullet
+    Reference: {fileID: 5486382924267833883, guid: b4aca1dfdcfe6bb4ab68d3ffbfed65c0,
+      type: 3}
+  Bullets: {fileID: 0}

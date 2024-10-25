@@ -2,6 +2,7 @@ using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
+using static Globals;
 
 public class Main : MonoBehaviour {
     public TextAsset      VarsAsset;
@@ -12,6 +13,7 @@ public class Main : MonoBehaviour {
     public SaveSystem     SaveSystem;
     public PlayerInput    Input;
     public ResourceLink   PlayerPrefab;
+    public Bullets        Bullets;
     
     private void Awake() {
         Vars.ParseVars(VarsAsset);
@@ -29,9 +31,11 @@ public class Main : MonoBehaviour {
         Singleton<TaskRunner>.Create(TaskRunner);
         Singleton<Events>.Create(Events);
         Singleton<PlayerInput>.Create(Input);
+        Singleton<Bullets>.Create(Bullets);
+        Bullets.Init();
 
         EntityManager.BakeEntities();
-        var player = EntityManager.CreateEntity(PlayerPrefab, Vector3.zero, Quaternion.identity);
+        var player = EntityManager.CreateEntity(PlayerPrefab, new Vector3(0, PlanesHeight, 0), Quaternion.identity);
         Input.Gameplay.Initialize(player);
     }
 
@@ -47,6 +51,7 @@ public class Main : MonoBehaviour {
         Clock.Update();
         Input.UpdateInput();
         EntityManager.Execute();
+        Bullets.UpdateBehavior();
         TaskRunner.RunTaskGroup(TaskGroupType.ExecuteAlways);
     }
 
